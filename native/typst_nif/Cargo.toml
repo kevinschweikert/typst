@@ -1,0 +1,21 @@
+[package]
+name = "typst_nif"
+version = "0.1.0"
+authors = ["Herman verschooten"]
+edition = "2021"
+
+[lib]
+name = "typst_nif"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+comemo = "0.4"
+rustler = "0.35.0"
+tar = "0.4.43"
+time = "0.3.36"
+ttf-parser = "0.25.0"
+typst = "0.12"
+typst-pdf = "0.12.0"
+ureq = "2.10.1"
+zune-inflate = "0.2.54"
