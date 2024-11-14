@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
+// use std::fs;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use typst::diag::{eco_format, FileError, FileResult, PackageError, PackageResult};
@@ -11,6 +10,7 @@ use typst::syntax::{FileId, Source};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
 use typst::Library;
+use typst_kit::fonts::{FontSlot, Fonts};
 use typst_pdf::PdfOptions;
 
 /// Main interface that determines the environment for Typst.
@@ -28,7 +28,7 @@ pub struct TypstNifWorld {
     book: LazyHash<FontBook>,
 
     /// Metadata about all known fonts.
-    fonts: Vec<Font>,
+    fonts: Vec<FontSlot>,
 
     /// Map of all known files.
     files: Arc<Mutex<HashMap<FileId, FileEntry>>>,
@@ -44,15 +44,18 @@ pub struct TypstNifWorld {
 }
 
 impl TypstNifWorld {
-    pub fn new(root: String, source: String) -> Self {
+    pub fn new(root: String, source: String, extra_fonts: Vec<String>) -> Self {
         let root = PathBuf::from(root);
-        let fonts = fonts(&root);
+        // let fonts = fonts(&root);
+        let fonts = Fonts::searcher()
+            .include_system_fonts(true)
+            .search_with(extra_fonts);
 
         Self {
             library: LazyHash::new(Library::default()),
-            book: LazyHash::new(FontBook::from_fonts(&fonts)),
+            book: LazyHash::new(fonts.book),
             root,
-            fonts,
+            fonts: fonts.fonts,
             source: Source::detached(source),
             time: time::OffsetDateTime::now_utc(),
             cache_directory: std::env::var_os("CACHE_DIRECTORY")
@@ -204,7 +207,7 @@ impl typst::World for TypstNifWorld {
 
     /// Accessing a specified font per index of font book.
     fn font(&self, id: usize) -> Option<Font> {
-        self.fonts.get(id).cloned()
+        self.fonts[id].get()
     }
 
     /// Get the current date.
@@ -216,25 +219,6 @@ impl typst::World for TypstNifWorld {
         let time = self.time.checked_to_offset(offset)?;
         Some(Datetime::Date(time.date()))
     }
-}
-
-/// Helper function
-fn fonts(root: &Path) -> Vec<Font> {
-    std::fs::read_dir(root.join("fonts"))
-        .expect("Could not read fonts from disk")
-        .map(Result::unwrap)
-        .flat_map(|entry| {
-            let path = entry.path();
-            let bytes = std::fs::read(&path).unwrap();
-            let buffer = Bytes::from(bytes);
-            let face_count = ttf_parser::fonts_in_collection(&buffer).unwrap_or(1);
-            (0..face_count).map(move |face| {
-                Font::new(buffer.clone(), face).unwrap_or_else(|| {
-                    panic!("failed to load font from {path:?} (face index {face})")
-                })
-            })
-        })
-        .collect()
 }
 
 fn retry<T, E>(mut f: impl FnMut() -> Result<T, E>) -> Result<T, E> {
@@ -251,35 +235,38 @@ fn http_successful(status: u16) -> bool {
 }
 
 #[rustler::nif]
-fn compile<'a>(markup: String, _extra_fonts: Vec<String>) -> Result<String, String> {
-    let world = TypstNifWorld::new(".".into(), markup);
+fn compile<'a>(markup: String, extra_fonts: Vec<String>) -> Result<String, String> {
+    let world = TypstNifWorld::new(".".into(), markup, extra_fonts);
     // Render document
-    let document = typst::compile(&world)
-        .output
-        .expect("Error compiling typst");
+    // let document = typst::compile(&world)
+    //     .output
+    //     .expect("Error compiling typst");
 
     // Output to pdf
-    let pdf = typst_pdf::pdf(&document, &PdfOptions::default()).expect("Error exporting PDF");
-    fs::write("./output.pdf", pdf).expect("Error writing PDF.");
-    // let result = match typst::compile(&world).output {
-    //     Ok(document) => {
-    //         let pdf = match typst_pdf::pdf(&document, &PdfOptions::default()) {
-    //             Ok(pdf_bytes) => {
-    //                 // the resulting string is not an utf-8 encoded string, but this is exactly what we
-    //                 // want as we are passing a binary back to elixir
-    //                 unsafe {
-    //                     return Ok(String::from_utf8_unchecked(pdf_bytes));
-    //                 }
-    //             }
-    //             Err(_e) => Err(String::from_str("Error").unwrap()),
-    //         };
-    //         pdf
-    //     }
-    //     Err(_e) => Err(String::from_str("Error").unwrap()),
-    // };
-
-    // result
-    return Ok(String::from_str("test").unwrap());
+    // let pdf = typst_pdf::pdf(&document, &PdfOptions::default()).expect("Error exporting PDF");
+    // fs::write("./output.pdf", pdf).expect("Error writing PDF.");
+    match typst::compile(&world).output {
+        Ok(document) => {
+            match typst_pdf::pdf(&document, &PdfOptions::default()) {
+                Ok(pdf_bytes) => {
+                    // the resulting string is not an utf-8 encoded string, but this is exactly what we
+                    // want as we are passing a binary back to elixir
+                    unsafe {
+                        return Ok(String::from_utf8_unchecked(pdf_bytes));
+                    }
+                }
+                // Err(e) => Err(String::from_str("Error").unwrap()),
+                Err(e) => {
+                    let error_string = format!("{:#?}", e);
+                    return Err(error_string);
+                }
+            };
+        }
+        Err(e) => {
+            let error_string = format!("{:#?}", e);
+            return Err(error_string);
+        }
+    };
 }
 
 rustler::init!("Elixir.Typst.NIF");

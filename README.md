@@ -1,6 +1,6 @@
 # Typst
 
-**TODO: Add description**
+This library interfaces with the Typst typesetting rust library
 
 ## Installation
 

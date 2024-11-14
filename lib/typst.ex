@@ -44,7 +44,10 @@ defmodule Typst do
   """
   def render_to_pdf(typst_markup, bindings \\ [], opts \\ []) do
     extra_fonts = Keyword.get(opts, :extra_fonts, []) ++ @embedded_fonts
-    markup = render_to_string(typst_markup, bindings)
+
+    markup =
+      render_to_string(typst_markup, bindings)
+
     Typst.NIF.compile(markup, extra_fonts)
   end
 
