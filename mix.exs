@@ -50,7 +50,7 @@ defmodule Typst.MixProject do
       files: [
         "lib",
         "native",
-        "priv/native",
+        "checksum-*.exs",
         "priv/fonts",
         ".formatter.exs",
         "README.md",
