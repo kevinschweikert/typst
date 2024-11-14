@@ -1,9 +1,14 @@
 defmodule Typst.NIF do
   @moduledoc false
 
-  mix_config = Mix.Project.config()
+  mix_config =
+    Mix.Project.config()
+
   version = mix_config[:version]
-  github_url = mix_config[:package][:links]["GitHub"]
+
+  github_url =
+    mix_config[:package][:links]["Github"]
+
   # Since Rustler 0.27.0, we need to change manually the mode for each env.
   # We want "debug" in dev and test because it's faster to compile.
   mode = if Mix.env() in [:dev, :test], do: :debug, else: :release

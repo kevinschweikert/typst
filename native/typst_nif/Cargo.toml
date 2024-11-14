@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 comemo = "0.4"
-rustler = "0.35.0"
+rustler = {version = "0.35", default-features = false, features = ["derive"]}
 tar = "0.4.43"
 time = "0.3.36"
 ttf-parser = "0.25.0"
@@ -20,3 +20,10 @@ typst-kit = "0.12.0"
 typst-pdf = "0.12.0"
 ureq = "2.10.1"
 zune-inflate = "0.2.54"
+
+# And then, your features.
+[features]
+default = ["nif_version_2_15"]
+nif_version_2_15 = ["rustler/nif_version_2_15"]
+nif_version_2_16 = ["rustler/nif_version_2_16"]
+nif_version_2_17 = ["rustler/nif_version_2_17"]
