@@ -46,7 +46,7 @@ defmodule Typst.MixProject do
         "Github" => @source_url,
         "Changelog" => "#{@source_url}/blob/v#{@version}/CHANGELOG.md"
       },
-      exclude: [
+      exclude_patterns: [
         "native/typst_nif/target",
         "priv/native/libtypst_nif.so"
       ],
