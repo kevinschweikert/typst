@@ -42,7 +42,10 @@ defmodule Typst.MixProject do
   defp package do
     [
       licenses: ["Apache-2.0"],
-      links: %{"Github" => @source_url},
+      links: %{
+        "Github" => @source_url,
+        "Changelog" => "#{@source_url}/blob/v#{@version}/CHANGELOG.md"
+      },
       exclude: [
         "native/typst_nif/target",
         "priv/native/libtypst_nif.so"
