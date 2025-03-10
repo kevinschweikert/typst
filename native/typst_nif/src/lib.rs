@@ -77,7 +77,7 @@ struct FileEntry {
 impl FileEntry {
     fn new(bytes: Vec<u8>, source: Option<Source>) -> Self {
         Self {
-            bytes: bytes.into(),
+            bytes: Bytes::new(bytes),
             source,
         }
     }
