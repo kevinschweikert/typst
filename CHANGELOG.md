@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.2] - 2025-03-11
+
+Second release to cope with issues in the checksum file
+
+## [v0.1.1] - 2025-03-11
+
+Updated Typst to verion 0.13 with thanks to a PR from kevinschweikert
+
 ## [v0.1.0] - 2024-11-15
 
 First release.
