@@ -4,6 +4,23 @@ defmodule Typst.Format do
   the format that Typst expects
   """
 
+  defmodule Table do
+    alias Typst.Format
+    defstruct [:columns, :header, rows: []]
+
+    defimpl String.Chars do
+      def to_string(table) do
+        """
+        #table(
+          columns: #{table.columns},
+          table.header(#{Enum.map_join(table.header, ", ", &Format.content(&1))}),
+          #{Format.table_content(table.rows)}
+        )
+        """
+      end
+    end
+  end
+
   @type column_data :: String.t() | integer
 
   @spec table_content(list(list(column_data))) :: String.t()
@@ -23,8 +40,9 @@ defmodule Typst.Format do
     end)
   end
 
-  defp format_column_element(e) when is_integer(e) or is_binary(e), do: add_quotes(e)
-  defp format_column_element(unknown), do: unknown |> inspect() |> add_quotes()
+  defp format_column_element(e) when is_integer(e) or is_binary(e), do: content(e)
+  defp format_column_element(unknown), do: unknown |> inspect() |> content()
 
-  defp add_quotes(s), do: "\"#{s}\""
+  def bold(el), do: "*#{el}*"
+  def content(el), do: "[#{el}]"
 end
