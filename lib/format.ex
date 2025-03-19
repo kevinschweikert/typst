@@ -4,23 +4,6 @@ defmodule Typst.Format do
   the format that Typst expects
   """
 
-  defmodule Table do
-    alias Typst.Format
-    defstruct [:columns, :header, rows: []]
-
-    defimpl String.Chars do
-      def to_string(table) do
-        """
-        #table(
-          columns: #{table.columns},
-          table.header(#{Enum.map_join(table.header, ", ", &Format.content(&1))}),
-          #{Format.table_content(table.rows)}
-        )
-        """
-      end
-    end
-  end
-
   @type column_data :: String.t() | integer
 
   @spec table_content(list(list(column_data))) :: String.t()
@@ -34,15 +17,41 @@ defmodule Typst.Format do
       iex> Typst.Format.table_content(columns)
       ~s/"John", "10", "20",\\n  "Alice", "20", "30"/
   """
+  @deprecated "use %Typst.Format.Table{}"
   def table_content(columns) when is_list(columns) do
     Enum.map_join(columns, ",\n  ", fn row ->
       Enum.map_join(row, ", ", &format_column_element/1)
     end)
   end
 
-  defp format_column_element(e) when is_integer(e) or is_binary(e), do: content(e)
-  defp format_column_element(unknown), do: unknown |> inspect() |> content()
+  defp format_column_element(e) when is_integer(e) or is_binary(e), do: add_quotes(e)
+  defp format_column_element(unknown), do: unknown |> inspect() |> add_quotes()
 
-  def bold(el), do: "*#{el}*"
-  def content(el), do: "[#{el}]"
+  defp add_quotes(s), do: "\"#{s}\""
+
+  def bold(el), do: ["*", el, "*"] |> IO.iodata_to_binary()
+  def content(el), do: ["[", el, "]"] |> IO.iodata_to_binary()
+  def array(list) when is_list(list), do: (["("] ++ list ++ [")"]) |> IO.iodata_to_binary()
+
+  @doc false
+  def if_set(nil, _), do: []
+  def if_set(_, content_fn) when is_function(content_fn), do: content_fn.()
+  def if_set(_, content), do: content
+
+  @doc false
+  def recurse_list(content), do: do_recurse(content, ", ")
+
+  defp do_recurse([], _separator), do: []
+  defp do_recurse([elem], _separator), do: process(elem)
+
+  defp do_recurse([elem | rest], separator) do
+    [process(elem), separator | do_recurse(rest, separator)]
+  end
+
+  defp process(element) when is_list(element), do: do_recurse(element, ", ")
+  defp process(element) when is_struct(element), do: to_string(element)
+  defp process(element), do: content(element)
+
+  def maybe_append_separator(list) when length(list) == 1, do: [list, ", "]
+  def maybe_append_separator(list), do: list
 end
