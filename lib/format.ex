@@ -30,6 +30,7 @@ defmodule Typst.Format do
   defp add_quotes(s), do: "\"#{s}\""
 
   def bold(el), do: ["*", to_string(el), "*"] |> IO.iodata_to_binary()
+  def content(nil), do: "[]"
   def content(el), do: ["[", to_string(el), "]"] |> IO.iodata_to_binary()
 
   def array(list) when is_list(list),
@@ -41,24 +42,16 @@ defmodule Typst.Format do
   def if_set(_, content), do: content
 
   @doc false
-  def recurse(content), do: do_recurse(content, ", ")
-
-  defp do_recurse([], _separator), do: []
-  defp do_recurse([elem], _separator), do: process(elem)
-
-  defp do_recurse([[] | rest], separator) do
-    do_recurse(rest, separator)
+  def recurse(content) when is_list(content) do
+    content
+    |> List.flatten()
+    |> Enum.map(&process/1)
+    |> Enum.intersperse(", ")
   end
 
-  defp do_recurse([elem | rest], separator) do
-    [process(elem), separator | do_recurse(rest, separator)]
-  end
+  def recurse(content), do: process(content)
 
-  defp do_recurse(elem, _), do: content(elem)
-
-  defp process(element) when is_list(element), do: do_recurse(element, ", ")
   defp process(element) when is_struct(element), do: to_string(element)
-  defp process(nil), do: "[]"
   defp process(element), do: content(element)
 
   def maybe_append_separator([]), do: []
