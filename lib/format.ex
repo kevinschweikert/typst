@@ -29,9 +29,11 @@ defmodule Typst.Format do
 
   defp add_quotes(s), do: "\"#{s}\""
 
-  def bold(el), do: ["*", el, "*"] |> IO.iodata_to_binary()
-  def content(el), do: ["[", el, "]"] |> IO.iodata_to_binary()
-  def array(list) when is_list(list), do: (["("] ++ list ++ [")"]) |> IO.iodata_to_binary()
+  def bold(el), do: ["*", to_string(el), "*"] |> IO.iodata_to_binary()
+  def content(el), do: ["[", to_string(el), "]"] |> IO.iodata_to_binary()
+
+  def array(list) when is_list(list),
+    do: (["("] ++ Enum.intersperse(list, ", ") ++ [")"]) |> IO.iodata_to_binary()
 
   @doc false
   def if_set(nil, _), do: []
@@ -44,14 +46,19 @@ defmodule Typst.Format do
   defp do_recurse([], _separator), do: []
   defp do_recurse([elem], _separator), do: process(elem)
 
+  defp do_recurse([[] | rest], separator) do
+    do_recurse(rest, separator)
+  end
+
   defp do_recurse([elem | rest], separator) do
     [process(elem), separator | do_recurse(rest, separator)]
   end
 
   defp process(element) when is_list(element), do: do_recurse(element, ", ")
   defp process(element) when is_struct(element), do: to_string(element)
+  defp process(nil), do: "[]"
   defp process(element), do: content(element)
 
-  def maybe_append_separator(list) when length(list) == 1, do: [list, ", "]
-  def maybe_append_separator(list), do: list
+  def maybe_append_separator([]), do: []
+  def maybe_append_separator(list), do: [list | ", "]
 end
