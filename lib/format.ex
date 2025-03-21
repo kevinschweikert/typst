@@ -41,7 +41,7 @@ defmodule Typst.Format do
   def if_set(_, content), do: content
 
   @doc false
-  def recurse_list(content), do: do_recurse(content, ", ")
+  def recurse(content), do: do_recurse(content, ", ")
 
   defp do_recurse([], _separator), do: []
   defp do_recurse([elem], _separator), do: process(elem)
@@ -53,6 +53,8 @@ defmodule Typst.Format do
   defp do_recurse([elem | rest], separator) do
     [process(elem), separator | do_recurse(rest, separator)]
   end
+
+  defp do_recurse(elem, _), do: content(elem)
 
   defp process(element) when is_list(element), do: do_recurse(element, ", ")
   defp process(element) when is_struct(element), do: to_string(element)
