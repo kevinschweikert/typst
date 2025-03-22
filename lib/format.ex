@@ -54,6 +54,7 @@ defmodule Typst.Format do
   defp process(element) when is_struct(element), do: to_string(element)
   defp process(element), do: content(element)
 
+  @doc false
   def maybe_append_separator([]), do: []
   def maybe_append_separator(list), do: [list | ", "]
 end

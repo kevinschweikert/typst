@@ -1,6 +1,23 @@
 defmodule Typst.Format.Table do
   import Typst.Format
 
+  @moduledoc """
+  Creates a typst [`#table()`](https://typst.app/docs/reference/model/table) and implements the `String.Chars` protocol for easy EEx interpolation.
+  To build more complex tables you can use the structs under this module like `Typst.Format.Table.Hline`
+
+  ## Examples
+
+      iex> alias Typst.Format.Table
+      ...> %Table{columns: 2, content: [["hello", "world"], ["foo", "bar"]]} |> to_string()
+      "#table(columns: 2, [hello], [world], [foo], [bar])"
+
+      iex> alias Typst.Format.Table
+      ...> alias Typst.Format.Table.Hline
+      ...> import Typst.Format
+      ...> %Table{columns: array(["1fr", "1fr"]), content: [["hello", "world"], %Hline{start: 1}, ["foo", "bar"]]} |> to_string()
+      "#table(columns: (1fr, 1fr), [hello], [world], table.hline(start: 1), [foo], [bar])"
+  """
+
   @enforce_keys [:content]
   defstruct [
     :content,
@@ -41,6 +58,17 @@ defmodule Typst.Format.Table do
   end
 
   defmodule Cell do
+    @moduledoc """
+    Creates a typst [`table.cell()`](https://typst.app/docs/reference/model/table/#definitions-cell) and implements the `String.Chars` protocol for easy EEx interpolation.
+
+    ## Examples
+
+        iex> alias Typst.Format.Table.Cell
+        ...> %Cell{x: 2, content: ["hello", "world"]} |> to_string()
+        "table.cell(x: 2, [hello], [world])"
+
+    """
+
     @enforce_keys [:content]
     defstruct [
       :content,
@@ -82,6 +110,17 @@ defmodule Typst.Format.Table do
   end
 
   defmodule Hline do
+    @moduledoc """
+    Creates a typst [`table.hline()`](https://typst.app/docs/reference/model/table/#definitions-hline) and implements the `String.Chars` protocol for easy EEx interpolation.
+
+    ## Examples
+
+        iex> alias Typst.Format.Table.Hline
+        ...> %Hline{start: 2} |> to_string()
+        "table.hline(start: 2)"
+
+    """
+
     defstruct [:y, :start, :end, :stroke, :position]
 
     defimpl String.Chars do
@@ -105,6 +144,17 @@ defmodule Typst.Format.Table do
   end
 
   defmodule Vline do
+    @moduledoc """
+    Creates a typst [`table.vline()`](https://typst.app/docs/reference/model/table/#definitions-vline) and implements the `String.Chars` protocol for easy EEx interpolation.
+
+    ## Examples
+
+        iex> alias Typst.Format.Table.Vline
+        ...> %Vline{start: 2} |> to_string()
+        "table.vline(start: 2)"
+
+    """
+
     defstruct [:x, :start, :end, :stroke, :position]
 
     defimpl String.Chars do
@@ -128,6 +178,17 @@ defmodule Typst.Format.Table do
   end
 
   defmodule Header do
+    @moduledoc """
+    Creates a typst [`table.header()`](https://typst.app/docs/reference/model/table/#definitions-header) and implements the `String.Chars` protocol for easy EEx interpolation.
+
+    ## Examples
+
+        iex> alias Typst.Format.Table.Header
+        ...> %Header{repeat: false, content: ["hello", "world"]} |> to_string()
+        "table.header(repeat: false, [hello], [world])"
+
+    """
+
     @enforce_keys [:content]
     defstruct [:repeat, :content]
 
@@ -145,6 +206,16 @@ defmodule Typst.Format.Table do
   end
 
   defmodule Footer do
+    @moduledoc """
+    Creates a typst [`table.footer()`](https://typst.app/docs/reference/model/table/#definitions-footer) and implements the `String.Chars` protocol for easy EEx interpolation.
+
+    ## Examples
+
+        iex> alias Typst.Format.Table.Footer
+        ...> %Footer{repeat: false, content: ["hello", "world"]} |> to_string()
+        "table.footer(repeat: false, [hello], [world])"
+
+    """
     @enforce_keys [:content]
     defstruct [:repeat, :content]
 
