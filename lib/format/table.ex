@@ -18,6 +18,19 @@ defmodule Typst.Format.Table do
       "#table(columns: (1fr, 1fr), [hello], [world], table.hline(start: 1), [foo], [bar])"
   """
 
+  @type t() :: %__MODULE__{
+          content: String.Chars.t() | [String.Chars.t()],
+          columns: non_neg_integer() | String.t(),
+          rows: non_neg_integer() | String.t(),
+          gutter: non_neg_integer() | String.t(),
+          row_gutter: non_neg_integer() | String.t(),
+          column_gutter: non_neg_integer() | String.t(),
+          fill: String.t(),
+          align: String.t(),
+          stroke: String.t(),
+          inset: String.t()
+        }
+
   @enforce_keys [:content]
   defstruct [
     :content,
@@ -68,6 +81,18 @@ defmodule Typst.Format.Table do
         "table.cell(x: 2, [hello], [world])"
 
     """
+
+    @type t() :: %__MODULE__{
+            content: String.Chars.t() | [String.Chars.t()],
+            x: non_neg_integer(),
+            y: non_neg_integer(),
+            colspan: non_neg_integer(),
+            rowspan: non_neg_integer(),
+            fill: String.t(),
+            align: String.t(),
+            stroke: String.t(),
+            breakable: boolean()
+          }
 
     @enforce_keys [:content]
     defstruct [
@@ -121,6 +146,14 @@ defmodule Typst.Format.Table do
 
     """
 
+    @type t() :: %__MODULE__{
+            y: non_neg_integer(),
+            start: non_neg_integer(),
+            end: non_neg_integer(),
+            stroke: String.t(),
+            position: :start | :end | :left | :center | :right | :top | :horizon | :bottom
+          }
+
     defstruct [:y, :start, :end, :stroke, :position]
 
     defimpl String.Chars do
@@ -154,6 +187,14 @@ defmodule Typst.Format.Table do
         "table.vline(start: 2)"
 
     """
+
+    @type t() :: %__MODULE__{
+            x: non_neg_integer(),
+            start: non_neg_integer(),
+            end: non_neg_integer(),
+            stroke: String.t(),
+            position: :start | :end | :left | :center | :right | :top | :horizon | :bottom
+          }
 
     defstruct [:x, :start, :end, :stroke, :position]
 
@@ -189,6 +230,11 @@ defmodule Typst.Format.Table do
 
     """
 
+    @type t() :: %__MODULE__{
+            content: String.Chars.t() | [String.Chars.t()],
+            repeat: boolean()
+          }
+
     @enforce_keys [:content]
     defstruct [:repeat, :content]
 
@@ -216,6 +262,12 @@ defmodule Typst.Format.Table do
         "table.footer(repeat: false, [hello], [world])"
 
     """
+
+    @type t() :: %__MODULE__{
+            content: String.Chars.t() | [String.Chars.t()],
+            repeat: boolean()
+          }
+
     @enforce_keys [:content]
     defstruct [:repeat, :content]
 

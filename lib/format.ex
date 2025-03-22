@@ -29,10 +29,14 @@ defmodule Typst.Format do
 
   defp add_quotes(s), do: "\"#{s}\""
 
+  @spec bold(String.Chars.t()) :: String.t()
   def bold(el), do: ["*", to_string(el), "*"] |> IO.iodata_to_binary()
+
+  @spec content(String.Chars.t()) :: String.t()
   def content(nil), do: "[]"
   def content(el), do: ["[", to_string(el), "]"] |> IO.iodata_to_binary()
 
+  @spec array(list()) :: String.t()
   def array(list) when is_list(list),
     do: (["("] ++ Enum.intersperse(list, ", ") ++ [")"]) |> IO.iodata_to_binary()
 
