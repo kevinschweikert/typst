@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.3] - 2025-04-16
+
+Additional functionality added by kevinschweikert, including helpers for tables.
+
 ## [v0.1.2] - 2025-03-11
 
 Second release to cope with issues in the checksum file

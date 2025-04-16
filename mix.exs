@@ -2,7 +2,7 @@ defmodule Typst.MixProject do
   use Mix.Project
 
   @source_url "http://github.com/Hermanverschooten/typst"
-  @version "0.1.2"
+  @version "0.1.3"
 
   def project do
     [
