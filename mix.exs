@@ -66,7 +66,25 @@ defmodule Typst.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md"]
+      extras: ["README.md"],
+      groups_for_modules: [
+        Table: [
+          Typst.Format.Table,
+          Typst.Format.Table.Cell,
+          Typst.Format.Table.Hline,
+          Typst.Format.Table.Vline,
+          Typst.Format.Table.Header,
+          Typst.Format.Table.Footer
+        ]
+      ],
+      nest_modules_by_prefix: [
+        Typst.Format.Table,
+        Typst.Format.Table.Cell,
+        Typst.Format.Table.Hline,
+        Typst.Format.Table.Vline,
+        Typst.Format.Table.Header,
+        Typst.Format.Table.Footer
+      ]
     ]
   end
 end
