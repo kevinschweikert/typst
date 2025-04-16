@@ -2,18 +2,10 @@ name: Precompile NIFs
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "native/**"
-      - ".github/workflows/release.yml"
     tags:
       - "*"
-  pull_request:
-    paths:
-      - ".github/workflows/release.yml"
   workflow_dispatch:
-    
+
 jobs:
   build_release:
     name: NIF ${{ matrix.nif }} - ${{ matrix.job.target }} (${{ matrix.job.os }} | ${{ matrix.job.variant || 'default' }})
