@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.4] - 2025-04-17
+
+Change the Ubuntu version to 22.04, before it had changed to 24.04 because of the removal of 20.04 from Github actions,
+but this caused issues with GLIBC.
+
 ## [v0.1.3] - 2025-04-16
 
 Additional functionality added by kevinschweikert, including helpers for tables.
