@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.5] - 2025-06-09
+
+Allow setting the root folder where Typst can find it's external assets. Thank you [jbowtie](https://github.com/jbowtie).
+
 ## [v0.1.4] - 2025-04-17
 
 Change the Ubuntu version to 22.04, before it had changed to 24.04 because of the removal of 20.04 from Github actions,
