@@ -60,6 +60,11 @@ jobs:
           workspaces: |
             native/typst_nif
 
+      - name: Set Rust stack size
+        shell: bash
+        run: |
+          echo "RUST_MIN_STACK=16777216" >> $GITHUB_ENV
+
       - name: Build the project
         id: build-crate
         uses: philss/rustler-precompiled-action@v1.1.4
