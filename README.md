@@ -19,3 +19,11 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/typst>.
 
+## Cutting a new release
+
+* Make the code changes
+* Merge into main
+* git push
+* git tag the new version and push it.
+* mix rustler_precompiled.download Typst.NIF --all --print
+* mix hex.publish
