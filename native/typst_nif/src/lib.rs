@@ -3,8 +3,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use typst::diag::{eco_format, FileError, FileResult, PackageError, PackageResult};
+use rustler::{Binary, Env, NewBinary, Term};
+use typst::diag::{
+    eco_format, FileError, FileResult, PackageError, PackageResult, SourceDiagnostic,
+};
+use typst::ecow::EcoVec;
 use typst::foundations::{Bytes, Datetime};
+use typst::layout::PagedDocument;
 use typst::syntax::package::PackageSpec;
 use typst::syntax::{FileId, Source};
 use typst::text::{Font, FontBook};
@@ -235,73 +240,101 @@ fn http_successful(status: u16) -> bool {
 }
 
 #[rustler::nif]
-fn compile<'a>(markup: String, root_dir: String, extra_fonts: Vec<String>) -> Result<String, String> {
+fn compile_pdf<'a>(
+    env: Env<'a>,
+    markup: String,
+    root_dir: String,
+    extra_fonts: Vec<String>,
+) -> Result<Term<'a>, String> {
+    let world = TypstNifWorld::new(root_dir, markup, extra_fonts);
+    let document: PagedDocument = typst::compile(&world)
+        .output
+        .map_err(|e| collect_typst_errors(e, world.source))?;
+
+    let pdf_bytes =
+        typst_pdf::pdf(&document, &PdfOptions::default()).map_err(|e| format!("{:#?}", e))?;
+
+    let mut binary = NewBinary::new(env, pdf_bytes.len());
+    binary.copy_from_slice(pdf_bytes.as_slice());
+
+    return Ok(binary.into());
+}
+
+#[rustler::nif]
+fn compile_png<'a>(
+    env: Env<'a>,
+    markup: String,
+    root_dir: String,
+    extra_fonts: Vec<String>,
+    pixels_per_pt: f32,
+) -> Result<Vec<Binary<'a>>, String> {
     let world = TypstNifWorld::new(root_dir, markup, extra_fonts);
 
-    match typst::compile(&world).output {
-        Ok(document) => {
-            match typst_pdf::pdf(&document, &PdfOptions::default()) {
-                Ok(pdf_bytes) => {
-                    // the resulting string is not an utf-8 encoded string, but this is exactly what we
-                    // want as we are passing a binary back to elixir
-                    unsafe {
-                        return Ok(String::from_utf8_unchecked(pdf_bytes));
-                    }
+    let document: PagedDocument = typst::compile(&world)
+        .output
+        .map_err(|e| collect_typst_errors(e, world.source))?;
+
+    let pngs: Result<Vec<Binary>, String> = document
+        .pages
+        .iter()
+        .map(|page| {
+            let pixmap = typst_render::render(page, pixels_per_pt);
+            let png = pixmap.encode_png().map_err(|e| format!("{:#?}", e))?;
+
+            let mut binary = NewBinary::new(env, png.len());
+            binary.copy_from_slice(&png);
+            Ok(binary.into())
+        })
+        .collect();
+
+    Ok(pngs?)
+}
+
+fn collect_typst_errors(errors: EcoVec<SourceDiagnostic>, source: Source) -> String {
+    let mut error_messages = Vec::new();
+
+    for error in errors {
+        let span = error.span;
+
+        let mut error_msg = format!("Error: {}", error.message);
+
+        // Try to get source location information
+        if !span.is_detached() && span.id() == Some(source.id()) {
+            if let Some(range) = source.range(span) {
+                let line = source.byte_to_line(range.start).unwrap_or(0) + 1;
+                let column = source.byte_to_column(range.start).unwrap_or(0) + 1;
+
+                error_msg = format!("[line {}:{}] {}", line, column, error.message);
+
+                // Try to get the actual source line for context
+                if let Some(line_range) = source.line_to_range(line - 1) {
+                    let source_line = &source.text()[line_range];
+                    let trimmed_line = source_line.trim_end();
+
+                    // Calculate the position of the error marker
+                    let leading_spaces = source_line.len() - source_line.trim_start().len();
+                    let marker_pos = column.saturating_sub(1).saturating_sub(leading_spaces);
+
+                    error_msg = format!(
+                        "{}\n  Source: {}\n         {}{}",
+                        error_msg,
+                        trimmed_line.trim(),
+                        " ".repeat(marker_pos),
+                        "^"
+                    );
                 }
-                Err(e) => {
-                    let error_string = format!("{:#?}", e);
-                    return Err(error_string);
-                }
-            };
-        }
-        Err(errors) => {
-            let mut error_messages = Vec::new();
-
-            for error in errors {
-                let span = error.span;
-                let source = &world.source;
-
-                let mut error_msg = format!("Error: {}", error.message);
-
-                // Try to get source location information
-                if !span.is_detached() && span.id() == Some(source.id()) {
-                    if let Some(range) = source.range(span) {
-                        let line = source.byte_to_line(range.start).unwrap_or(0) + 1;
-                        let column = source.byte_to_column(range.start).unwrap_or(0) + 1;
-
-                        error_msg = format!("[line {}:{}] {}", line, column, error.message);
-
-                        // Try to get the actual source line for context
-                        if let Some(line_range) = source.line_to_range(line - 1) {
-                            let source_line = &source.text()[line_range];
-                            let trimmed_line = source_line.trim_end();
-
-                            // Calculate the position of the error marker
-                            let leading_spaces = source_line.len() - source_line.trim_start().len();
-                            let marker_pos = column.saturating_sub(1).saturating_sub(leading_spaces);
-
-                            error_msg = format!(
-                                "{}\n  Source: {}\n         {}{}",
-                                error_msg,
-                                trimmed_line.trim(),
-                                " ".repeat(marker_pos),
-                                "^"
-                            );
-                        }
-                    }
-                }
-
-                // Add hints if any
-                for hint in &error.hints {
-                    error_msg = format!("{}\n  Hint: {}", error_msg, hint);
-                }
-
-                error_messages.push(error_msg);
             }
-
-            return Err(error_messages.join("\n\n"));
         }
-    };
+
+        // Add hints if any
+        for hint in &error.hints {
+            error_msg = format!("{}\n  Hint: {}", error_msg, hint);
+        }
+
+        error_messages.push(error_msg);
+    }
+
+    error_messages.join("\n\n")
 }
 
 rustler::init!("Elixir.Typst.NIF");
