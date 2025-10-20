@@ -30,7 +30,11 @@ defmodule Typst do
     EEx.eval_string(typst_markup, bindings)
   end
 
-  @type typst_opt :: {:extra_fonts, list(String.t())}
+  @type typst_opt ::
+          {:extra_fonts, list(String.t())}
+          | {:root_dir, String.t()}
+          | {:pixels_per_pt, number()}
+          | {:assets, Keyword.t() | Map.t() | list({String.t(), binary()})}
 
   @spec render_to_pdf(String.t(), list(formattable()), list(typst_opt())) ::
           {:ok, binary()} | {:error, String.t()}
@@ -48,9 +52,13 @@ defmodule Typst do
     extra_fonts = Keyword.get(opts, :extra_fonts, []) ++ @embedded_fonts
     root_dir = Keyword.get(opts, :root_dir, ".")
 
+    assets =
+      Keyword.get(opts, :assets, [])
+      |> Enum.map(fn {key, val} -> {to_string(key), val} end)
+
     markup = render_to_string(typst_markup, bindings)
 
-    Typst.NIF.compile_pdf(markup, root_dir, extra_fonts)
+    Typst.NIF.compile_pdf(markup, root_dir, extra_fonts, assets)
   end
 
   @spec render_to_pdf!(String.t(), list(formattable()), list(typst_opt())) :: binary()
@@ -81,9 +89,13 @@ defmodule Typst do
     root_dir = Keyword.get(opts, :root_dir, ".")
     pixels_per_pt = Keyword.get(opts, :pixels_per_pt, 1.0)
 
+    assets =
+      Keyword.get(opts, :assets, [])
+      |> Enum.map(fn {key, val} -> {to_string(key), val} end)
+
     markup = render_to_string(typst_markup, bindings)
 
-    Typst.NIF.compile_png(markup, root_dir, extra_fonts, pixels_per_pt)
+    Typst.NIF.compile_png(markup, root_dir, extra_fonts, pixels_per_pt, assets)
   end
 
   @spec render_to_png!(String.t(), list(formattable()), list(typst_opt())) :: list(binary())
