@@ -12,4 +12,19 @@ defmodule TypstTest do
     {:ok, [png]} = Typst.render_to_png("= Hello <%= name %>", name: "world")
     assert <<137, 80, 78, 71, 13, 10, 26, 10, _rest::binary>> = png
   end
+
+  describe "errors" do
+    test "error message on invalid template" do
+      template = ~S"#image("
+
+      expected_error = 
+        """
+        [line 1:7] unclosed delimiter
+          Source: #image(
+                        ^
+        """ |> String.trim_trailing()
+
+      assert {:error, ^expected_error} = Typst.render_to_pdf(template)
+    end
+  end
 end
