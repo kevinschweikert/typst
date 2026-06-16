@@ -119,7 +119,7 @@ Building from source requires a rust toolchain of at least version `1.92.0`.
 * Wait for CI to build precompiled binaries
 * `mix rustler_precompiled.download Typst.NIF --all --print`
 * Checkout the tag: `git checkout v0.x.y`
-* `mix hex.publish`
+* `mix hex.publish` — run this manually; Hex now prompts for a 2FA token, so it can't be automated
 * `git checkout main`
 
 ## License
