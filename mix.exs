@@ -70,7 +70,7 @@ defmodule Typst.MixProject do
     [
       licenses: ["Apache-2.0"],
       links: %{
-        "Github" => @source_url,
+        "GitHub" => @source_url,
         "Changelog" => "#{@source_url}/blob/v#{@version}/CHANGELOG.md"
       },
       exclude_patterns: [

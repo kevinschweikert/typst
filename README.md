@@ -1,7 +1,7 @@
 # Typst
 
 [![Hex.pm](https://img.shields.io/hexpm/v/typst.svg)](https://hex.pm/packages/typst)
-[![Docs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/typst)
+[![Docs](https://img.shields.io/badge/hex-docs-blue.svg)](https://typst.hexdocs.pm)
 
 Elixir bindings for the [Typst](https://typst.app) typesetting system, powered by a Rust NIF. Generate PDFs, PNGs, and SVGs from Typst markup directly in your Elixir application.
 
@@ -94,7 +94,7 @@ All render functions accept these options:
 
 ## Documentation
 
-Full documentation is available at [hexdocs.pm/typst](https://hexdocs.pm/typst).
+Full documentation is available at [typst.hexdocs.pm](https://typst.hexdocs.pm).
 
 ## Building from Source
 
