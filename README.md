@@ -23,7 +23,7 @@ Add `typst` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:typst, "~> 0.3"}
+    {:typst, "~> 0.4"}
   ]
 end
 ```

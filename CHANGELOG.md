@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.0] - 2026-06-16
+
 ### Added
 - `:pdf_standards` option to `render_to_pdf/3` for PDF/A compliance (e.g. `"a-2b"`, `"a-4"`). Thank you [adrian-mihai-olaru](https://github.com/adrian-mihai-olaru).
 - `TYPST_BUILD=true` environment variable to force the NIF to build from source. Thank you [gworkman](https://github.com/gworkman).
@@ -127,7 +129,8 @@ Updated Typst to verion 0.13 with thanks to a PR from kevinschweikert
 
 First release.
 
-[Unreleased]: https://github.com/Hermanverschooten/typst/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/Hermanverschooten/typst/compare/v0.4.0...HEAD
+[v0.4.0]: https://github.com/Hermanverschooten/typst/compare/v0.3.4...v0.4.0
 [v0.3.4]: https://github.com/Hermanverschooten/typst/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/Hermanverschooten/typst/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/Hermanverschooten/typst/compare/v0.3.1...v0.3.2
