@@ -55,6 +55,46 @@ defmodule TypstTest do
     end
   end
 
+  describe "custom fonts" do
+    @custom_font_dir Path.join(["test", "assets", "fonts"])
+    @custom_font_markup ~S"""
+    #set text(font: "Typst Custom Test Font")
+    Hello custom font
+    """
+
+    test "a font from :extra_fonts is loaded and used" do
+      {:ok, [with_font]} =
+        Typst.render_to_svg(@custom_font_markup, [], extra_fonts: [@custom_font_dir])
+
+      {:ok, [without_font]} = Typst.render_to_svg(@custom_font_markup, [])
+
+      assert with_font =~ "<svg"
+      refute with_font == without_font
+    end
+
+    test ":extra_fonts produces valid output for every format" do
+      opts = [extra_fonts: [@custom_font_dir]]
+
+      {:ok, pdf} = Typst.render_to_pdf(@custom_font_markup, [], opts)
+      assert <<37, 80, 68, 70, 45, _rest::binary>> = pdf
+
+      {:ok, [png]} = Typst.render_to_png(@custom_font_markup, [], opts)
+      assert <<137, 80, 78, 71, 13, 10, 26, 10, _rest::binary>> = png
+
+      {:ok, [svg]} = Typst.render_to_svg(@custom_font_markup, [], opts)
+      assert svg =~ "<svg"
+    end
+
+    test ":extra_fonts is honored with cache_fonts disabled" do
+      opts = [extra_fonts: [@custom_font_dir], cache_fonts: false]
+
+      {:ok, [with_font]} = Typst.render_to_svg(@custom_font_markup, [], opts)
+      {:ok, [without_font]} = Typst.render_to_svg(@custom_font_markup, [], cache_fonts: false)
+
+      refute with_font == without_font
+    end
+  end
+
   describe "pdf_standards" do
     test "produces a valid PDF when a standard is specified" do
       markup = ~S"""
