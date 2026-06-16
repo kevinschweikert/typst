@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 
 use rustler::{Binary, Env, NewBinary, NifStruct, Term};
@@ -7,20 +7,20 @@ use typst::diag::{
     eco_format, FileError, FileResult, PackageError, PackageResult, SourceDiagnostic,
 };
 use typst::ecow::EcoVec;
-use typst::foundations::{Bytes, Datetime};
-use typst::layout::PagedDocument;
+use typst::foundations::{Bytes, Datetime, Duration};
 use typst::syntax::package::PackageSpec;
-use typst::syntax::{FileId, Source, VirtualPath};
+use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
+use typst::WorldExt;
 use typst::{Library, LibraryExt};
-use typst_kit::fonts::{FontSlot, Fonts};
+use typst_kit::fonts::FontStore;
+use typst_layout::PagedDocument;
 use typst_pdf::{PdfOptions, PdfStandard, PdfStandards};
 
 struct CachedFonts {
     key: Vec<String>,
-    book: Arc<LazyHash<FontBook>>,
-    fonts: Arc<Vec<FontSlot>>,
+    store: Arc<FontStore>,
 }
 
 static FONT_CACHE: LazyLock<Mutex<Option<CachedFonts>>> = LazyLock::new(|| Mutex::new(None));
@@ -49,10 +49,7 @@ pub struct TypstNifWorld {
     source: Source,
 
     /// Metadata about all known fonts.
-    book: Arc<LazyHash<FontBook>>,
-
-    /// Metadata about all known fonts.
-    fonts: Arc<Vec<FontSlot>>,
+    store: Arc<FontStore>,
 
     /// Map of all known files.
     files: Arc<Mutex<HashMap<FileId, FileEntry>>>,
@@ -68,10 +65,9 @@ impl TypstNifWorld {
     pub fn new(root: String, source: String, extra_fonts: Vec<String>, cache_fonts: bool) -> Self {
         let root = PathBuf::from(root);
 
-        let mut sorted_key = extra_fonts.clone();
-        sorted_key.sort();
-
-        let (book, fonts) = if cache_fonts {
+        let store = if cache_fonts {
+            let mut sorted_key = extra_fonts.clone();
+            sorted_key.sort();
             let mut cache = FONT_CACHE
                 .lock()
                 .unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -82,32 +78,20 @@ impl TypstNifWorld {
             };
 
             if needs_scan {
-                let scanned = Fonts::searcher()
-                    .include_system_fonts(true)
-                    .search_with(extra_fonts);
                 *cache = Some(CachedFonts {
                     key: sorted_key,
-                    book: Arc::new(LazyHash::new(scanned.book)),
-                    fonts: Arc::new(scanned.fonts),
+                    store: Arc::new(build_font_store(&extra_fonts)),
                 });
             }
 
-            let cached = cache.as_ref().unwrap();
-            (Arc::clone(&cached.book), Arc::clone(&cached.fonts))
+            Arc::clone(&cache.as_ref().unwrap().store)
         } else {
-            let scanned = Fonts::searcher()
-                .include_system_fonts(true)
-                .search_with(extra_fonts);
-            (
-                Arc::new(LazyHash::new(scanned.book)),
-                Arc::new(scanned.fonts),
-            )
+            Arc::new(build_font_store(&extra_fonts))
         };
 
         Self {
-            book,
             root,
-            fonts,
+            store,
             source: Source::detached(source),
             time: time::OffsetDateTime::now_utc(),
             cache_directory: CACHE_DIRECTORY.clone(),
@@ -153,15 +137,15 @@ impl TypstNifWorld {
         if let Some(entry) = files.get(&id) {
             return Ok(entry.clone());
         }
-        let path = if let Some(package) = id.package() {
+        let path = if let VirtualRoot::Package(package) = id.root() {
             // Fetching file from package
             let package_dir = self.download_package(package)?;
-            id.vpath().resolve(&package_dir)
+            id.vpath().realize(&package_dir)
         } else {
             // Fetching file from disk
-            id.vpath().resolve(&self.root)
+            id.vpath().realize(&self.root)
         }
-        .ok_or(FileError::AccessDenied)?;
+        .map_err(FileError::Realize)?;
 
         let content = std::fs::read(&path).map_err(|error| FileError::from_io(error, &path))?;
         Ok(files
@@ -224,8 +208,8 @@ impl TypstNifWorld {
         vpath: S,
         bytes: Vec<u8>,
     ) -> FileResult<FileId> {
-        let vp = VirtualPath::new(vpath.into());
-        let id = FileId::new(None, vp);
+        let vp = VirtualPath::new(vpath.into()).map_err(|_| FileError::Other(None))?;
+        let id = FileId::new(RootedPath::new(VirtualRoot::Project, vp));
         let mut files = self.files.lock().map_err(|_| FileError::AccessDenied)?;
         files.insert(id, FileEntry::new(bytes, None)); // Source created lazily if ever needed
         Ok(id)
@@ -243,7 +227,7 @@ impl typst::World for TypstNifWorld {
 
     /// Metadata about all known Books.
     fn book(&self) -> &LazyHash<FontBook> {
-        &self.book
+        self.store.book()
     }
 
     /// Accessing the main source file.
@@ -267,18 +251,27 @@ impl typst::World for TypstNifWorld {
 
     /// Accessing a specified font per index of font book.
     fn font(&self, id: usize) -> Option<Font> {
-        self.fonts.get(id).and_then(|slot| slot.get())
+        self.store.font(id)
     }
 
     /// Get the current date.
     ///
-    /// Optionally, an offset in hours is given.
-    fn today(&self, offset: Option<i64>) -> Option<Datetime> {
-        let offset = offset.unwrap_or(0);
-        let offset = time::UtcOffset::from_hms(offset.try_into().ok()?, 0, 0).ok()?;
-        let time = self.time.checked_to_offset(offset)?;
-        Some(Datetime::Date(time.date()))
+    /// Optionally, an offset is given.
+    fn today(&self, offset: Option<Duration>) -> Option<Datetime> {
+        let offset = offset.map(time::Duration::from).unwrap_or_default();
+        let shifted = self.time.checked_add(offset)?;
+        Some(Datetime::Date(shifted.date()))
     }
+}
+
+fn build_font_store(extra_fonts: &[String]) -> FontStore {
+    let mut store = FontStore::new();
+    store.extend(typst_kit::fonts::embedded());
+    store.extend(typst_kit::fonts::system());
+    for dir in extra_fonts {
+        store.extend(typst_kit::fonts::scan(Path::new(dir)));
+    }
+    store
 }
 
 fn retry<T, E>(mut f: impl FnMut() -> Result<T, E>) -> Result<T, E> {
@@ -337,7 +330,7 @@ fn compile_pdf<'a>(
 
     let document: PagedDocument = typst::compile(&world)
         .output
-        .map_err(|e| collect_typst_errors(e, world.source))?;
+        .map_err(|e| collect_typst_errors(e, &world))?;
 
     comemo::evict(0);
 
@@ -350,17 +343,18 @@ fn compile_pdf<'a>(
             .map(|s| parse_pdf_standard(s))
             .collect::<Result<Vec<_>, _>>()?;
         PdfOptions {
-            standards: PdfStandards::new(&standards).map_err(|e| format!("{}", e))?,
+            standards: PdfStandards::new(&standards).map_err(|e| e.message().to_string())?,
             ..PdfOptions::default()
         }
     };
 
-    let pdf_bytes = typst_pdf::pdf(&document, &options).map_err(|e| format!("{:#?}", e))?;
+    let pdf_bytes =
+        typst_pdf::pdf(&document, &options).map_err(|e| collect_typst_errors(e, &world))?;
 
     let mut binary = NewBinary::new(env, pdf_bytes.len());
     binary.copy_from_slice(pdf_bytes.as_slice());
 
-    return Ok(binary.into());
+    Ok(binary.into())
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
@@ -369,7 +363,7 @@ fn compile_png<'a>(
     markup: String,
     root_dir: String,
     extra_fonts: Vec<String>,
-    pixels_per_pt: f32,
+    pixels_per_pt: f64,
     assets: Vec<(String, Binary<'a>)>,
     cache_fonts: bool,
 ) -> Result<Vec<Binary<'a>>, String> {
@@ -383,15 +377,19 @@ fn compile_png<'a>(
 
     let document: PagedDocument = typst::compile(&world)
         .output
-        .map_err(|e| collect_typst_errors(e, world.source))?;
+        .map_err(|e| collect_typst_errors(e, &world))?;
 
     comemo::evict(0);
 
+    let options = typst_render::RenderOptions {
+        pixel_per_pt: typst::utils::Scalar::new(pixels_per_pt),
+        render_bleed: false,
+    };
     let pngs: Result<Vec<Binary>, String> = document
-        .pages
+        .pages()
         .iter()
         .map(|page| {
-            let pixmap = typst_render::render(page, pixels_per_pt);
+            let pixmap = typst_render::render(page, &options);
             let png = pixmap.encode_png().map_err(|e| format!("{:#?}", e))?;
 
             let mut binary = NewBinary::new(env, png.len());
@@ -400,7 +398,7 @@ fn compile_png<'a>(
         })
         .collect();
 
-    Ok(pngs?)
+    pngs
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
@@ -422,15 +420,16 @@ fn compile_svg<'a>(
 
     let document: PagedDocument = typst::compile(&world)
         .output
-        .map_err(|e| collect_typst_errors(e, world.source))?;
+        .map_err(|e| collect_typst_errors(e, &world))?;
 
     comemo::evict(0);
 
+    let options = typst_svg::SvgOptions::default();
     let svgs: Vec<Binary> = document
-        .pages
+        .pages()
         .iter()
         .map(|page| {
-            let svg_string = typst_svg::svg(page);
+            let svg_string = typst_svg::svg(page, &options);
             let svg_bytes = svg_string.as_bytes();
 
             let mut binary = NewBinary::new(env, svg_bytes.len());
@@ -442,8 +441,9 @@ fn compile_svg<'a>(
     Ok(svgs)
 }
 
-fn collect_typst_errors(errors: EcoVec<SourceDiagnostic>, source: Source) -> String {
+fn collect_typst_errors(errors: EcoVec<SourceDiagnostic>, world: &TypstNifWorld) -> String {
     let mut error_messages = Vec::new();
+    let source = &world.source;
 
     for error in errors {
         let span = error.span;
@@ -451,7 +451,7 @@ fn collect_typst_errors(errors: EcoVec<SourceDiagnostic>, source: Source) -> Str
         let mut error_msg = format!("Error: {}", error.message);
 
         if !span.is_detached() && span.id() == Some(source.id()) {
-            if let Some(range) = source.range(span) {
+            if let Some(range) = world.range(span) {
                 let lines = source.lines();
                 let line = lines.byte_to_line(range.start).unwrap_or(0) + 1;
                 let column = lines.byte_to_column(range.start).unwrap_or(0) + 1;
@@ -480,7 +480,7 @@ fn collect_typst_errors(errors: EcoVec<SourceDiagnostic>, source: Source) -> Str
 
         // Add hints if any
         for hint in &error.hints {
-            error_msg = format!("{}\n  Hint: {}", error_msg, hint);
+            error_msg = format!("{}\n  Hint: {}", error_msg, hint.v);
         }
 
         error_messages.push(error_msg);
