@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.1] - 2026-06-16
+
+### Changed
+- Updated `rustler` 0.37.3 → 0.38.0 (Rust NIF crate and Elixir dependency).
+- Updated dev dependency `ex_doc` 0.40.2 → 0.40.3.
+
 ## [v0.4.0] - 2026-06-16
 
 ### Added
@@ -129,7 +135,8 @@ Updated Typst to verion 0.13 with thanks to a PR from kevinschweikert
 
 First release.
 
-[Unreleased]: https://github.com/Hermanverschooten/typst/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Hermanverschooten/typst/compare/v0.4.1...HEAD
+[v0.4.1]: https://github.com/Hermanverschooten/typst/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/Hermanverschooten/typst/compare/v0.3.4...v0.4.0
 [v0.3.4]: https://github.com/Hermanverschooten/typst/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/Hermanverschooten/typst/compare/v0.3.2...v0.3.3
