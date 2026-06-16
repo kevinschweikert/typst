@@ -11,8 +11,7 @@ defmodule Typst.NIF do
 
   version = mix_config[:version]
 
-  github_url =
-    mix_config[:package][:links]["Github"]
+  github_url = mix_config[:source_url]
 
   # Since Rustler 0.27.0, we need to change manually the mode for each env.
   # We want "debug" in dev and test because it's faster to compile.
