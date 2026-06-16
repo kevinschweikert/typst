@@ -23,7 +23,7 @@ Add `typst` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:typst, "~> 0.2"}
+    {:typst, "~> 0.3"}
   ]
 end
 ```
@@ -90,6 +90,7 @@ All render functions accept these options:
 - `:trim` — trim blank lines left by EEx tags (default: `false`)
 - `:cache_fonts` — cache scanned fonts across calls (default: `true`)
 - `:pixels_per_pt` — pixels per pt unit, only for `render_to_png/3` (default: `1.0`)
+- `:pdf_standards` — list of PDF/A standard strings to comply with, only for `render_to_pdf/3` (default: `[]`)
 
 ## Documentation
 

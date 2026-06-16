@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `:pdf_standards` option to `render_to_pdf/3` for PDF/A compliance (e.g. `"a-2b"`, `"a-4"`). Thank you [adrian-mihai-olaru](https://github.com/adrian-mihai-olaru).
+- `TYPST_BUILD=true` environment variable to force the NIF to build from source. Thank you [gworkman](https://github.com/gworkman).
+
+### Changed
+- Updated Typst 0.14.2 → 0.15.0. Thank you [kevinschweikert](https://github.com/kevinschweikert).
+- Building the NIF from source now requires a Rust toolchain of at least 1.92.0 (Typst 0.15 MSRV).
 
 ## [v0.3.4] - 2026-04-14
 
